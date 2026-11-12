@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Movie Ticket Booking System | CSE 2102 Data Structures</title>
+<meta name="description" content="A data structures project: booking requests wait in a queue and confirmed tickets sit on a stack. Try it live.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Fraunces:opsz,wght@9..144,600;9..144,800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    color-scheme: dark;
+    --house: #15101d;
+    --surface: #211a2e;
+    --surface-2: #2b2240;
+    --line: #3a2f52;
+    --text: #f0ebf8;
+    --muted: #a99fbd;
+    --claret: #c23852;
+    --claret-deep: #8f2238;
+    --gold: #f3b94d;
+    --gold-deep: #d79a2b;
+    --ink: #2a1c08;
+    --ok: #7fdca8;
+    --bad: #ff9a9a;
+    --display: "Fraunces", Georgia, "Times New Roman", serif;
+    --body: "DM Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--house);
+    color: var(--text);
+    font-family: var(--body);
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--gold); }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 20px; }
+
+  /* top bar */
+  .bar { border-bottom: 1px solid var(--line); }
+  .bar .wrap { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-top: 14px; padding-bottom: 14px; flex-wrap: wrap; }
+  .brand { font-family: var(--display); font-weight: 800; font-size: 1.15rem; text-decoration: none; color: var(--text); }
+  .brand span { color: var(--gold); }
+  .bar nav { display: flex; gap: 18px; flex-wrap: wrap; }
+  .bar nav a { color: var(--muted); text-decoration: none; font-size: 0.95rem; }
+  .bar nav a:hover { color: var(--text); }
+
+  /* hero */
+  .hero { padding: 44px 0 28px; }
+  .hero-grid { display: grid; grid-template-columns: 1fr 1.05fr; gap: 40px; align-items: start; }
+  h1 {
+    font-family: var(--display); font-weight: 800; font-size: clamp(2.2rem, 5vw, 3.5rem);
+    line-height: 1.05; margin: 0 0 16px; letter-spacing: -0.02em;
+  }
+  .lead { color: var(--muted); font-size: 1.08rem; margin: 0 0 26px; max-width: 46ch; }
+
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 20px; }
+  .panel h2 { font-family: var(--display); font-size: 1.25rem; margin: 0 0 4px; }
+  .panel .hint { color: var(--muted); font-size: 0.9rem; margin: 0 0 16px; }
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 0.9rem; font-weight: 500; margin-bottom: 5px; }
+  input[type=text], input[type=number] {
+    width: 100%; padding: 11px 12px; font: inherit; color: var(--text);
+    background: var(--house); border: 1px solid var(--line); border-radius: 8px;
+  }
+  input::placeholder { color: #7d7392; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .stepper { display: flex; align-items: center; gap: 0; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--house); }
+  .stepper button { width: 44px; height: 44px; border: 0; background: transparent; color: var(--text); font-size: 1.3rem; cursor: pointer; }
+  .stepper button:hover { background: var(--surface-2); }
+  .stepper output { flex: 1; text-align: center; font-weight: 700; font-size: 1.05rem; }
+
+  .btn {
+    font: inherit; font-weight: 700; padding: 12px 18px; border-radius: 9px; cursor: pointer;
+    border: 1px solid transparent; transition: transform .12s ease, background .15s ease;
+  }
+  .btn:active { transform: translateY(1px); }
+  .btn.primary { background: var(--claret); color: #fff; }
+  .btn.primary:hover { background: #d3445f; }
+  .btn.gold { background: var(--gold); color: var(--ink); }
+  .btn.gold:hover { background: #ffc864; }
+  .btn.ghost { background: transparent; color: var(--text); border-color: var(--line); }
+  .btn.ghost:hover { background: var(--surface-2); }
+  .btn.wide { width: 100%; }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+  :focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .field-error { color: var(--bad); font-size: 0.85rem; min-height: 1.2em; margin: 6px 0 0; }
+
+  /* auditorium */
+  .stage { padding: 6px 0 0; }
+  .screen {
+    height: 64px; margin: 0 6%;
+    background: linear-gradient(#e9eefc, #9fb3e8);
+    border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+    box-shadow: 0 -4px 60px 8px rgba(160,185,255,.35);
+    display: flex; align-items: flex-end; justify-content: center;
+    color: #26304f; font-size: .8rem; font-weight: 700; padding-bottom: 8px;
+  }
+  .beam { height: 34px; margin: 0 6%; background: linear-gradient(rgba(160,185,255,.22), transparent); clip-path: polygon(0 0, 100% 0, 92% 100%, 8% 100%); }
+  .seat-grid { display: grid; grid-template-columns: auto repeat(5, 1fr); gap: 10px; align-items: center; margin-top: 10px; padding: 0 6%; }
+  .row-label { color: var(--muted); font-size: .85rem; font-weight: 700; width: 18px; }
+  .seat {
+    position: relative; aspect-ratio: 1.15 / 1; border-radius: 12px 12px 6px 6px;
+    background: var(--surface-2); border: 1px solid var(--line);
+    display: grid; place-items: center; font-size: .78rem; font-weight: 700; color: var(--muted);
+    transition: background .25s ease, color .25s ease, transform .25s ease;
+  }
+  .seat::after { content: ""; position: absolute; left: 14%; right: 14%; bottom: -5px; height: 5px; border-radius: 0 0 6px 6px; background: var(--line); }
+  .seat.taken { background: var(--claret); border-color: var(--claret-deep); color: #fff; transform: translateY(1px); }
+  .seat.taken::after { background: var(--claret-deep); }
+  .seat.pop { animation: seatpop .5s ease; }
+  .seat.glow { outline: 3px solid var(--gold); outline-offset: 2px; }
+  @keyframes seatpop { 0% { transform: scale(.7); } 60% { transform: scale(1.1); } 100% { transform: scale(1); } }
+  .legend { display: flex; gap: 18px; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-top: 22px; padding: 14px 16px; border-top: 1px solid var(--line); }
+  .key { display: inline-flex; align-items: center; gap: 7px; color: var(--muted); font-size: .88rem; margin-right: 14px; }
+  .key i { width: 14px; height: 12px; border-radius: 5px 5px 2px 2px; display: inline-block; background: var(--surface-2); border: 1px solid var(--line); }
+  .key i.t { background: var(--claret); border-color: var(--claret-deep); }
+  .free-count { font-family: var(--display); font-size: 1.7rem; font-weight: 800; }
+  .free-count small { font-family: var(--body); font-size: .9rem; font-weight: 400; color: var(--muted); }
+
+  /* sections */
+  section.block { padding: 40px 0 8px; }
+  .block h2.title { font-family: var(--display); font-size: 1.8rem; margin: 0 0 6px; letter-spacing: -0.01em; }
+  .block p.sub { color: var(--muted); margin: 0 0 20px; max-width: 62ch; }
+  .head-row { display: flex; justify-content: space-between; align-items: end; gap: 16px; flex-wrap: wrap; margin-bottom: 8px; }
+
+  /* queue */
+  .lane { display: flex; gap: 14px; overflow-x: auto; padding: 18px 4px 18px; min-height: 132px; align-items: stretch; }
+  .chip {
+    flex: 0 0 auto; width: 210px; background: var(--surface); border: 1px solid var(--line);
+    border-radius: 12px; padding: 12px 14px; position: relative; animation: slidein .4s ease;
+  }
+  .chip.front { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold) inset; }
+  .chip .tag { position: absolute; top: -11px; left: 12px; font-size: .75rem; font-weight: 700; padding: 1px 9px; border-radius: 99px; background: var(--gold); color: var(--ink); }
+  .chip .tag.rear { background: var(--surface-2); color: var(--muted); border: 1px solid var(--line); }
+  .chip .who { font-weight: 700; }
+  .chip .meta { color: var(--muted); font-size: .88rem; }
+  .chip .num { float: right; font-family: var(--display); font-weight: 800; color: var(--gold); }
+  .chip.leaving { animation: slideout .35s ease forwards; }
+  .chip.shake { animation: shake .4s ease; border-color: var(--bad); }
+  .chip.glow { box-shadow: 0 0 0 3px var(--gold); }
+  .empty { color: var(--muted); border: 1px dashed var(--line); border-radius: 12px; padding: 22px; width: 100%; text-align: center; }
+  @keyframes slidein { from { opacity: 0; transform: translateX(30px); } to { opacity: 1; transform: none; } }
+  @keyframes slideout { to { opacity: 0; transform: translateY(26px); } }
+  @keyframes shake { 0%,100% { transform: none; } 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+
+  /* stack of tickets */
+  .two-col { display: grid; grid-template-columns: 1.2fr 1fr; gap: 24px; align-items: start; }
+  .stack-box { display: flex; flex-direction: column; gap: 12px; }
+  .ticket {
+    display: grid; grid-template-columns: 1fr auto; background: var(--gold); color: var(--ink);
+    border-radius: 12px; position: relative; animation: drop .45s cubic-bezier(.2,.9,.3,1.2);
+  }
+  .ticket::before, .ticket::after {
+    content: ""; position: absolute; right: 78px; width: 18px; height: 18px; border-radius: 50%; background: var(--house);
+  }
+  .ticket::before { top: -9px; }
+  .ticket::after { bottom: -9px; }
+  .ticket .main { padding: 14px 18px; }
+  .ticket .movie { font-family: var(--display); font-weight: 800; font-size: 1.2rem; line-height: 1.15; }
+  .ticket .line { font-size: .92rem; margin-top: 4px; }
+  .ticket .stub { border-left: 2px dashed rgba(42,28,8,.45); padding: 14px 16px; width: 96px; text-align: center; display: flex; flex-direction: column; justify-content: center; }
+  .ticket .stub b { font-family: var(--display); font-size: 1.4rem; line-height: 1; }
+  .ticket .stub span { font-size: .75rem; }
+  .ticket .toptag { position: absolute; left: 18px; top: -11px; background: var(--claret); color: #fff; font-size: .75rem; font-weight: 700; padding: 1px 9px; border-radius: 99px; }
+  .ticket.leaving { animation: slideout .35s ease forwards; }
+  .ticket.glow { box-shadow: 0 0 0 4px #fff; }
+  @keyframes drop { from { opacity: 0; transform: translateY(-30px) scale(.97); } to { opacity: 1; transform: none; } }
+
+  .log { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; }
+  .log h3 { font-family: var(--display); margin: 0 0 4px; font-size: 1.1rem; }
+  .log p { color: var(--muted); font-size: .88rem; margin: 0 0 10px; }
+  .log ol { list-style: none; margin: 0; padding: 0; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .84rem; }
+  .log li { padding: 6px 0; border-top: 1px solid var(--line); color: var(--text); }
+  .log li.fail { color: var(--bad); }
+  .log li.new { animation: slidein .35s ease; }
+  .log .none { color: var(--muted); font-family: var(--body); border: 0; }
+
+  .searchbox { display: flex; gap: 8px; }
+  .searchbox input { width: 130px; }
+
+  /* explainer */
+  .explain { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+  .explain h3 { font-family: var(--display); font-size: 1.3rem; margin: 0 0 6px; }
+  .explain p { color: var(--muted); margin: 0 0 12px; }
+  .mini { display: flex; gap: 6px; margin-top: 4px; }
+  .mini span { padding: 6px 12px; border-radius: 8px; background: var(--surface-2); border: 1px solid var(--line); font-weight: 700; font-size: .9rem; }
+  .mini.col { flex-direction: column; width: 140px; }
+  .mini.col span { text-align: center; }
+  .note-line { color: var(--muted); font-size: .85rem; margin-top: 6px; }
+  table.cx { width: 100%; border-collapse: collapse; margin-top: 28px; font-size: .95rem; }
+  table.cx th, table.cx td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+  table.cx th { color: var(--muted); font-weight: 500; font-size: .88rem; }
+  table.cx td:nth-child(2) { font-weight: 700; color: var(--gold); }
+
+  /* code */
+  .code-wrap { position: relative; background: #0f0b16; border: 1px solid var(--line); border-radius: 14px; }
+  .code-wrap pre { margin: 0; padding: 18px; max-height: 420px; overflow: auto; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .82rem; line-height: 1.5; color: #e4def2; }
+  .code-tools { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+
+  /* team */
+  .team { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 6px; }
+  .member { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
+  .member b { display: block; }
+  .member span { color: var(--muted); font-size: .9rem; }
+  .guide { margin-top: 18px; color: var(--muted); }
+  .guide b { color: var(--text); }
+
+  footer { margin-top: 56px; border-top: 1px solid var(--line); padding: 22px 0 40px; color: var(--muted); font-size: .88rem; }
+
+  /* toast */
+  #toast {
+    position: fixed; left: 50%; bottom: 22px; transform: translate(-50%, 30px); opacity: 0;
+    background: var(--surface-2); border: 1px solid var(--line); border-left: 4px solid var(--ok);
+    padding: 12px 18px; border-radius: 10px; max-width: min(92vw, 460px); pointer-events: none;
+    transition: opacity .25s ease, transform .25s ease; z-index: 20; box-shadow: 0 10px 30px rgba(0,0,0,.45);
+  }
+  #toast.show { opacity: 1; transform: translate(-50%, 0); }
+  #toast.bad { border-left-color: var(--bad); }
+
+  @media (max-width: 900px) {
+    .hero-grid, .two-col, .explain { grid-template-columns: 1fr; }
+    .team { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 480px) {
+    .team { grid-template-columns: 1fr; }
+    .two { grid-template-columns: 1fr; }
+    .ticket .stub { width: 78px; }
+    .ticket::before, .ticket::after { right: 60px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="bar">
+  <div class="wrap">
+    <a class="brand" href="#top">Movie Ticket <span>Booking</span></a>
+    <nav aria-label="Main">
+      <a href="#demo">Try it</a>
+      <a href="#how">How it works</a>
+      <a href="#code">C code</a>
+      <a href="#team">Team</a>
+    </nav>
+  </div>
+</div>
+
+<main id="top">
+  <!-- HERO + DEMO -->
+  <section class="hero" id="demo">
+    <div class="wrap hero-grid">
+      <div>
+        <h1>Book a seat. Wait your turn.</h1>
+        <p class="lead">Requests line up in a queue, so the first person to ask is the first to be confirmed. Confirmed tickets pile onto a stack, so the latest booking is the first one you can cancel.</p>
+
+        <div class="panel">
+          <h2>Request tickets</h2>
+          <p class="hint">Your request joins the end of the waiting line.</p>
+          <div class="field">
+            <label for="name">Your name</label>
+            <input id="name" type="text" maxlength="24" autocomplete="off" placeholder="e.g. Arun">
+          </div>
+          <div class="two">
+            <div class="field">
+              <label for="movie">Movie</label>
+              <input id="movie" type="text" maxlength="24" list="movies" autocomplete="off" placeholder="Pick or type">
+              <datalist id="movies"><option value="Leo"><option value="Jailer"><option value="Vikram"><option value="Jawan"></datalist>
+            </div>
+            <div class="field">
+              <label for="seatsOut">Seats</label>
+              <div class="stepper">
+                <button type="button" id="minus" aria-label="One seat fewer">−</button>
+                <output id="seatsOut" for="minus plus">2</output>
+                <button type="button" id="plus" aria-label="One seat more">+</button>
+              </div>
+            </div>
+          </div>
+          <p class="field-error" id="formError" role="alert"></p>
+          <div class="row">
+            <button class="btn primary" id="add">Join the queue</button>
+            <button class="btn ghost" id="sample" title="Adds Arun (Leo, 2 seats) and Bala (Jailer, 3 seats)">Add sample requests</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="stage">
+        <div class="screen" aria-hidden="true">Screen 1</div>
+        <div class="beam" aria-hidden="true"></div>
+        <div class="seat-grid" id="seatGrid" role="group" aria-label="Seat map"></div>
+        <div class="legend">
+          <div>
+            <span class="key"><i></i>Free</span>
+            <span class="key"><i class="t"></i>Booked</span>
+          </div>
+          <div class="free-count"><span id="free">20</span> <small>of 20 seats free</small></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- QUEUE -->
+  <section class="block">
+    <div class="wrap">
+      <div class="head-row">
+        <div>
+          <h2 class="title">Waiting line</h2>
+          <p class="sub" style="margin:0">The queue. Confirming always serves the person at the front.</p>
+        </div>
+        <button class="btn gold" id="confirm">Confirm next request</button>
+      </div>
+      <div class="lane" id="lane" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <!-- STACK + LOG -->
+  <section class="block">
+    <div class="wrap">
+      <div class="head-row">
+        <div>
+          <h2 class="title">Confirmed tickets</h2>
+          <p class="sub" style="margin:0">The stack. The newest ticket sits on top and is cancelled first.</p>
+        </div>
+        <div class="row">
+          <div class="searchbox">
+            <input id="sid" type="number" min="1" placeholder="Booking ID" aria-label="Booking ID to search">
+            <button class="btn ghost" id="search">Search</button>
+          </div>
+          <button class="btn primary" id="cancel">Cancel last booking</button>
+        </div>
+      </div>
+      <div class="two-col" style="margin-top:20px">
+        <div class="stack-box" id="stack" aria-live="polite"></div>
+        <div class="log">
+          <h3>What the program just did</h3>
+          <p>Every click runs one queue or stack operation.</p>
+          <ol id="log"><li class="none">Nothing yet. Join the queue to start.</li></ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="block" id="how">
+    <div class="wrap">
+      <h2 class="title">How it works</h2>
+      <p class="sub">The project is a menu-driven C program. This page runs the same logic in the browser so you can see the structures move.</p>
+      <div class="explain">
+        <div>
+          <h3>Queue: first in, first out</h3>
+          <p>Booking requests are added at the rear and served from the front. Nobody can skip ahead, which keeps booking fair.</p>
+          <div class="mini"><span>201</span><span>202</span><span>203</span></div>
+          <div class="note-line">Front is on the left, rear is on the right.</div>
+        </div>
+        <div>
+          <h3>Stack: last in, first out</h3>
+          <p>A confirmed booking is pushed on top. Cancelling pops the top booking and returns its seats.</p>
+          <div class="mini col"><span>203 (top)</span><span>202</span><span>201</span></div>
+        </div>
+      </div>
+      <table class="cx">
+        <thead><tr><th>Operation</th><th>Time</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr><td>Request booking (enqueue)</td><td>O(1)</td><td>Insert at the rear</td></tr>
+          <tr><td>Confirm next (dequeue and push)</td><td>O(1)</td><td>Remove from front, add to top</td></tr>
+          <tr><td>Cancel last (pop)</td><td>O(1)</td><td>Remove the top ticket</td></tr>
+          <tr><td>Display and search</td><td>O(n)</td><td>Visit every stored booking</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- CODE -->
+  <section class="block" id="code">
+    <div class="wrap">
+      <h2 class="title">The C program</h2>
+      <p class="sub">The original console version, written with arrays and structures.</p>
+      <div class="code-tools">
+        <button class="btn gold" id="copy">Copy code</button>
+        <a class="btn ghost" href="movie_booking.c" download style="text-decoration:none;display:inline-block">Download movie_booking.c</a>
+      </div>
+      <div class="code-wrap"><pre><code id="src">#include &lt;stdio.h&gt;
+#include &lt;string.h&gt;
+
+#define MAX 50
+
+struct Booking {
+    int id;
+    char name[30];
+    char movie[30];
+    int seats;
+};
+
+struct Booking queue[MAX];
+struct Booking stack[MAX];
+int front = 0, rear = -1, count = 0;
+int top = -1;
+int availableSeats = 20;
+
+void requestBooking() {
+    struct Booking b;
+    if (count == MAX) {
+        printf("Booking queue is full!\n");
+        return;
+    }
+    printf("Enter Booking ID: ");
+    scanf("%d", &amp;b.id);
+    printf("Enter name: ");
+    scanf("%s", b.name);
+    printf("Enter movie: ");
+    scanf("%s", b.movie);
+    printf("Enter number of seats: ");
+    scanf("%d", &amp;b.seats);
+    if (b.seats &lt;= 0) {
+        printf("Invalid number of seats!\n");
+        return;
+    }
+    rear = (rear + 1) % MAX;
+    queue[rear] = b;
+    count++;
+    printf("Booking request added to queue!\n");
+}
+
+void displayQueue() {
+    int i, pos;
+    if (count == 0) {
+        printf("No pending booking requests.\n");
+        return;
+    }
+    printf("ID\tName\tMovie\tSeats\n");
+    for (i = 0; i &lt; count; i++) {
+        pos = (front + i) % MAX;
+        printf("%d\t%s\t%s\t%d\n", queue[pos].id, queue[pos].name,
+               queue[pos].movie, queue[pos].seats);
+    }
+}
+
+void confirmBooking() {
+    struct Booking b;
+    if (count == 0) {
+        printf("No pending booking requests.\n");
+        return;
+    }
+    b = queue[front];
+    if (b.seats &gt; availableSeats) {
+        printf("Not enough seats for %s! Only %d left.\n", b.name, availableSeats);
+        return;
+    }
+    front = (front + 1) % MAX;
+    count--;
+    availableSeats = availableSeats - b.seats;
+    top++;
+    stack[top] = b;
+    printf("Booking confirmed for %s (ID %d)\n", b.name, b.id);
+}
+
+void displayConfirmed() {
+    int i;
+    if (top == -1) {
+        printf("No confirmed bookings.\n");
+        return;
+    }
+    printf("ID\tName\tMovie\tSeats\n");
+    for (i = top; i &gt;= 0; i--) {
+        printf("%d\t%s\t%s\t%d\n", stack[i].id, stack[i].name,
+               stack[i].movie, stack[i].seats);
+    }
+}
+
+void cancelLast() {
+    if (top == -1) {
+        printf("No confirmed bookings to cancel.\n");
+        return;
+    }
+    availableSeats = availableSeats + stack[top].seats;
+    printf("Cancelled booking of %s (ID %d)\n", stack[top].name, stack[top].id);
+    top--;
+}
+
+void searchBooking() {
+    int id, i, pos, found = 0;
+    printf("Enter Booking ID to search: ");
+    scanf("%d", &amp;id);
+    for (i = 0; i &lt; count; i++) {
+        pos = (front + i) % MAX;
+        if (queue[pos].id == id) {
+            printf("Found in pending queue: %s, %s, %d seat(s)\n",
+                   queue[pos].name, queue[pos].movie, queue[pos].seats);
+            found = 1;
+        }
+    }
+    for (i = 0; i &lt;= top; i++) {
+        if (stack[i].id == id) {
+            printf("Found in confirmed list: %s, %s, %d seat(s)\n",
+                   stack[i].name, stack[i].movie, stack[i].seats);
+            found = 1;
+        }
+    }
+    if (found == 0)
+        printf("Booking ID not found.\n");
+}
+
+int main() {
+    int choice;
+    while (1) {
+        printf("\n--- MOVIE TICKET BOOKING SYSTEM ---\n");
+        printf("Seats available: %d\n", availableSeats);
+        printf("1.Request Booking 2.Display Pending 3.Confirm Next\n");
+        printf("4.Display Confirmed 5.Cancel Last 6.Search 7.Exit\n");
+        printf("Enter choice: ");
+        scanf("%d", &amp;choice);
+        switch (choice) {
+            case 1: requestBooking(); break;
+            case 2: displayQueue(); break;
+            case 3: confirmBooking(); break;
+            case 4: displayConfirmed(); break;
+            case 5: cancelLast(); break;
+            case 6: searchBooking(); break;
+            case 7: printf("Thank you!\n"); return 0;
+            default: printf("Invalid choice!\n");
+        }
+    }
+    return 0;
+}</code></pre></div>
+    </div>
+  </section>
+
+  <!-- TEAM -->
+  <section class="block" id="team">
+    <div class="wrap">
+      <h2 class="title">Team</h2>
+      <p class="sub">CSE 2102 – Data Structures, B.Tech Cyber Security</p>
+      <div class="team">
+        <div class="member"><b>Mohamed Jaffar S</b><span>250181601031</span></div>
+        <div class="member"><b>Padmesh V</b><span>250181601050</span></div>
+        <div class="member"><b>Priyadharshini T</b><span>250181601051</span></div>
+        <div class="member"><b>Madhusudhan C</b><span>250181601022</span></div>
+      </div>
+      <p class="guide"><b>Assistant Professor In Charge:</b> Archana, Department of Data Structure, B.S. Abdur Rahman Crescent Institute of Science &amp; Technology.</p>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">Academic project for demonstration only. It is not a real ticket booking service, and no payments are taken.</div>
+</footer>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  var ROWS = ["A", "B", "C", "D"];
+  var COLS = 5;
+  var TOTAL = ROWS.length * COLS;
+  var MAX_QUEUE = 50;
+  var MAX_PER_BOOKING = 6;
+
+  var queue = [];
+  var stack = [];
+  var seatOwner = [];       // seatOwner[i] = booking id or null
+  var nextId = 201;
+  var seatsWanted = 2;
+  var busy = false;
+
+  function $(id) { return document.getElementById(id); }
+  function esc(s) {
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+
+  function resetSeats() {
+    seatOwner = [];
+    for (var i = 0; i < TOTAL; i++) seatOwner.push(null);
+  }
+  function seatLabel(i) { return ROWS[Math.floor(i / COLS)] + (i % COLS + 1); }
+  function freeCount() {
+    var n = 0;
+    for (var i = 0; i < TOTAL; i++) if (seatOwner[i] === null) n++;
+    return n;
+  }
+
+  /* ---------- toast + log ---------- */
+  var toastTimer = null;
+  function toast(text, bad) {
+    var t = $("toast");
+    t.textContent = text;
+    t.className = "show" + (bad ? " bad" : "");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.className = ""; }, 2800);
+  }
+  var logItems = [];
+  function log(text, fail) {
+    logItems.unshift({ text: text, fail: !!fail });
+    if (logItems.length > 7) logItems.pop();
+    var ol = $("log");
+    var html = "";
+    for (var i = 0; i < logItems.length; i++) {
+      html += '<li class="' + (logItems[i].fail ? "fail " : "") + (i === 0 ? "new" : "") + '">' + esc(logItems[i].text) + "</li>";
+    }
+    ol.innerHTML = html;
+  }
+
+  /* ---------- rendering ---------- */
+  function renderSeats(popIds) {
+    var html = "";
+    for (var r = 0; r < ROWS.length; r++) {
+      html += '<div class="row-label" aria-hidden="true">' + ROWS[r] + "</div>";
+      for (var c = 0; c < COLS; c++) {
+        var i = r * COLS + c;
+        var taken = seatOwner[i] !== null;
+        var cls = "seat" + (taken ? " taken" : "") + (popIds && popIds.indexOf(i) !== -1 ? " pop" : "");
+        html += '<div class="' + cls + '" data-seat="' + i + '" aria-label="Seat ' + seatLabel(i) + (taken ? ", booked" : ", free") + '">' +
+                (taken ? seatLabel(i) : "") + "</div>";
+      }
+    }
+    $("seatGrid").innerHTML = html;
+    $("free").textContent = freeCount();
+  }
+
+  function renderQueue(leavingFirst) {
+    var lane = $("lane");
+    if (queue.length === 0) {
+      lane.innerHTML = '<div class="empty">The line is empty. Join the queue above, or add the sample requests.</div>';
+      return;
+    }
+    var html = "";
+    for (var i = 0; i < queue.length; i++) {
+      var b = queue[i];
+      var tag = "";
+      if (i === 0) tag = '<span class="tag">Front: served next</span>';
+      else if (i === queue.length - 1) tag = '<span class="tag rear">Rear</span>';
+      html += '<div class="chip' + (i === 0 ? " front" : "") + (i === 0 && leavingFirst ? " leaving" : "") + '" data-id="' + b.id + '">' +
+              tag + '<span class="num">#' + b.id + '</span><div class="who">' + esc(b.name) + '</div>' +
+              '<div class="meta">' + esc(b.movie) + '</div><div class="meta">' + b.seats + (b.seats === 1 ? " seat" : " seats") + "</div></div>";
+    }
+    lane.innerHTML = html;
+  }
+
+  function renderStack(leavingTop) {
+    var box = $("stack");
+    if (stack.length === 0) {
+      box.innerHTML = '<div class="empty">No confirmed tickets yet. Confirm the next request in the line.</div>';
+      return;
+    }
+    var html = "";
+    for (var i = stack.length - 1; i >= 0; i--) {
+      var b = stack[i];
+      var isTop = i === stack.length - 1;
+      html += '<div class="ticket' + (isTop && leavingTop ? " leaving" : "") + '" data-id="' + b.id + '">' +
+              (isTop ? '<span class="toptag">Top: cancelled first</span>' : "") +
+              '<div class="main"><div class="movie">' + esc(b.movie) + '</div>' +
+              '<div class="line">' + esc(b.name) + " &middot; " + b.seats + (b.seats === 1 ? " seat" : " seats") + '</div>' +
+              '<div class="line">Seats: ' + b.labels.join(", ") + '</div></div>' +
+              '<div class="stub"><span>Booking</span><b>#' + b.id + '</b></div></div>';
+    }
+    box.innerHTML = html;
+  }
+
+  function renderAll() { renderSeats(); renderQueue(); renderStack(); }
+
+  /* ---------- actions ---------- */
+  function addRequest(name, movie, seats) {
+    var b = { id: nextId++, name: name, movie: movie, seats: seats };
+    queue.push(b);                              // enqueue at the rear
+    log("enqueue(" + b.id + ")  " + name + ", " + movie + ", " + seats + (seats === 1 ? " seat" : " seats"));
+    return b;
+  }
+
+  $("add").onclick = function () {
+    var name = $("name").value.trim();
+    var movie = $("movie").value.trim();
+    var err = $("formError");
+    if (name === "" || movie === "") { err.textContent = "Enter your name and a movie to continue."; return; }
+    if (queue.length >= MAX_QUEUE) { err.textContent = "The waiting line is full."; return; }
+    err.textContent = "";
+    var b = addRequest(name, movie, seatsWanted);
+    $("name").value = ""; $("movie").value = "";
+    renderQueue();
+    toast("Request #" + b.id + " added to the queue. " + queue.length + " waiting.");
+  };
+
+  $("sample").onclick = function () {
+    if (queue.length + 2 > MAX_QUEUE) { toast("The waiting line is full.", true); return; }
+    addRequest("Arun", "Leo", 2);
+    addRequest("Bala", "Jailer", 3);
+    renderQueue();
+    toast("Added requests from Arun and Bala.");
+  };
+
+  $("minus").onclick = function () { if (seatsWanted > 1) { seatsWanted--; $("seatsOut").textContent = seatsWanted; } };
+  $("plus").onclick = function () { if (seatsWanted < MAX_PER_BOOKING) { seatsWanted++; $("seatsOut").textContent = seatsWanted; } };
+
+  $("confirm").onclick = function () {
+    if (busy) return;
+    if (queue.length === 0) { toast("No pending requests to confirm.", true); log("dequeue() failed: queue is empty", true); return; }
+    var b = queue[0];
+    var free = freeCount();
+    if (b.seats > free) {
+      var el = document.querySelector('#lane .chip[data-id="' + b.id + '"]');
+      if (el) { el.classList.remove("front"); void el.offsetWidth; el.classList.add("front", "shake"); }
+      toast("Not enough seats for " + b.name + ". Only " + free + " left.", true);
+      log("confirm failed: #" + b.id + " needs " + b.seats + ", only " + free + " free", true);
+      return;
+    }
+    busy = true;
+    renderQueue(true);                          // play the leaving animation first
+    setTimeout(function () {
+      queue.shift();                            // dequeue from the front
+      var labels = [], popIds = [];
+      for (var i = 0; i < TOTAL && labels.length < b.seats; i++) {
+        if (seatOwner[i] === null) { seatOwner[i] = b.id; labels.push(seatLabel(i)); popIds.push(i); }
+      }
+      b.labels = labels;
+      stack.push(b);                            // push onto the stack
+      renderQueue(); renderStack(); renderSeats(popIds);
+      log("dequeue() -> #" + b.id + ", then push(#" + b.id + ")  seats " + labels.join(", "));
+      toast("Booking confirmed for " + b.name + ". Seats " + labels.join(", ") + ".");
+      busy = false;
+    }, 330);
+  };
+
+  $("cancel").onclick = function () {
+    if (busy) return;
+    if (stack.length === 0) { toast("No confirmed bookings to cancel.", true); log("pop() failed: stack is empty", true); return; }
+    busy = true;
+    var b = stack[stack.length - 1];
+    renderStack(true);
+    setTimeout(function () {
+      stack.pop();                              // pop the top ticket
+      for (var i = 0; i < TOTAL; i++) if (seatOwner[i] === b.id) seatOwner[i] = null;
+      renderStack(); renderSeats();
+      log("pop() -> #" + b.id + " cancelled, " + b.seats + (b.seats === 1 ? " seat" : " seats") + " freed");
+      toast("Cancelled the booking of " + b.name + ". " + b.seats + (b.seats === 1 ? " seat is" : " seats are") + " free again.");
+      busy = false;
+    }, 330);
+  };
+
+  $("search").onclick = function () {
+    var id = parseInt($("sid").value, 10);
+    if (isNaN(id)) { toast("Enter a booking ID to search.", true); return; }
+    var i, j, found = false;
+    for (i = 0; i < queue.length; i++) {
+      if (queue[i].id === id) {
+        found = true;
+        var chip = document.querySelector('#lane .chip[data-id="' + id + '"]');
+        if (chip) { chip.classList.add("glow"); chip.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" }); setTimeout(function () { chip.classList.remove("glow"); }, 2500); }
+        toast("#" + id + " is waiting in the queue (position " + (i + 1) + ").");
+        log("search(" + id + ") -> found in queue, position " + (i + 1));
+      }
+    }
+    for (j = 0; j < stack.length; j++) {
+      if (stack[j].id === id) {
+        found = true;
+        var tk = document.querySelector('#stack .ticket[data-id="' + id + '"]');
+        if (tk) { tk.classList.add("glow"); setTimeout(function () { tk.classList.remove("glow"); }, 2500); }
+        var seats = document.querySelectorAll("#seatGrid .seat");
+        for (var s = 0; s < TOTAL; s++) if (seatOwner[s] === id) seats[s].classList.add("glow");
+        setTimeout(function () { var g = document.querySelectorAll("#seatGrid .seat.glow"); for (var k = 0; k < g.length; k++) g[k].classList.remove("glow"); }, 2500);
+        toast("#" + id + " is confirmed: " + stack[j].name + ", seats " + stack[j].labels.join(", ") + ".");
+        log("search(" + id + ") -> found in confirmed stack");
+      }
+    }
+    if (!found) { toast("Booking ID " + id + " was not found.", true); log("search(" + id + ") -> not found", true); }
+  };
+
+  /* ---------- code copy ---------- */
+  $("copy").onclick = function () {
+    var text = $("src").textContent;
+    function done() { toast("C code copied."); }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done, function () { fallbackCopy(text); done(); });
+    } else { fallbackCopy(text); done(); }
+  };
+  function fallbackCopy(text) {
+    var ta = document.createElement("textarea");
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    try { document.execCommand("copy"); } catch (e) {}
+    document.body.removeChild(ta);
+  }
+
+  resetSeats();
+  renderAll();
+})();
+</script>
+</body>
+</html>
